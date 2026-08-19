@@ -1,0 +1,4 @@
+# 将下面的占位符替换为你的 Cloudflare Worker 地址
+# Worker 地址格式：https://us-etf.<你的账户名>.workers.dev
+# 示例：/api/* https://us-etf.jikequanzi.workers.dev/:splat 200
+/api/* https://us-etf.jikequanzi.workers.dev/:splat 200

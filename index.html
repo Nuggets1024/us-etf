@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="国内场内纳指100 / 标普500 ETF 对比 · 费率 / 规模 / 溢价 / 成交">
+<title>美股宽基 ETF · 纳指100 / 标普500</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #111;
+    --muted: #737373;
+    --line: #e5e5e5;
+    --line-strong: #d4d4d4;
+    --surface: #fff;
+    --up: #c2410c;
+    --down: #0f766e;
+    --warn: #b45309;
+    --danger: #b91c1c;
+    --ink: #171717;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+    --sans: "IBM Plex Sans", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    --max: 1280px;
+    --pad: 20px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0a0a;
+      --fg: #f5f5f5;
+      --muted: #a3a3a3;
+      --line: #262626;
+      --line-strong: #404040;
+      --surface: #111;
+      --up: #fb923c;
+      --down: #2dd4bf;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --ink: #fafafa;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 14px; -webkit-font-smoothing: antialiased; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.5;
+    min-height: 100dvh;
+  }
+  a { color: inherit; }
+  button, input { font: inherit; color: inherit; background: none; border: 0; }
+  button { cursor: pointer; }
+  .wrap { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad) 64px; }
+
+  /* —— header: thin top bar —— */
+  .top {
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .top-inner {
+    max-width: var(--max);
+    margin: 0 auto;
+    padding: 18px var(--pad);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .brand mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border: 1.5px solid var(--fg);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    background: transparent;
+    color: var(--fg);
+  }
+  .brand h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .brand .sub {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  /* —— market strip —— */
+  .strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    align-items: center;
+    padding: 10px 0 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 28px;
+    min-height: 40px;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .pill .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+    background: transparent;
+  }
+  .pill.open { color: var(--down); }
+  .pill.open .dot { background: currentColor; border-color: currentColor; }
+  .pill.closed { color: var(--muted); }
+  .refresh { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .refresh[data-live="1"] { color: var(--fg); }
+
+  /* —— 价格闪烁：涨绿跌红，变化时闪一下 —— */
+  @keyframes flashUp {
+    0% { background: rgba(34,197,94,0.35); }
+    100% { background: transparent; }
+  }
+  @keyframes flashDown {
+    0% { background: rgba(239,68,68,0.35); }
+    100% { background: transparent; }
+  }
+  .flash-up { animation: flashUp 0.9s ease-out; }
+  .flash-down { animation: flashDown 0.9s ease-out; }
+
+  /* —— stats: hairline grid —— */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--line);
+    background: var(--surface);
+    margin-bottom: 28px;
+  }
+  .stat {
+    padding: 16px 18px;
+    border-right: 1px solid var(--line);
+  }
+  .stat:last-child { border-right: 0; }
+  .stat .k {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .stat .v {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+  .stat .v small {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-left: 2px;
+  }
+  .stat .s {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  /* —— controls —— */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    margin-bottom: 12px;
+  }
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border-bottom: 1px solid var(--line);
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .tab {
+    position: relative;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+    border-bottom: 1px solid transparent;
+    margin-bottom: -1px;
+    transition: color .15s ease;
+  }
+  .tab:hover { color: var(--fg); }
+  .tab[aria-selected="true"] {
+    color: var(--fg);
+    border-bottom-color: var(--fg);
+    font-weight: 500;
+  }
+  .search {
+    flex: 0 0 240px;
+    max-width: 100%;
+  }
+  .search input {
+    width: 100%;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line-strong);
+    outline: none;
+    font-size: 13px;
+    background: transparent;
+  }
+  .search input::placeholder { color: var(--muted); }
+  .search input:focus { border-bottom-color: var(--fg); }
+
+  /* —— legend —— */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    padding: 10px 0 16px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .legend i {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border: 1px solid currentColor;
+    margin-right: 6px;
+    vertical-align: -1px;
+  }
+  .lg-fee-0 { color: var(--down); }
+  .lg-fee-1 { color: #65a30d; }
+  .lg-fee-2 { color: var(--warn); }
+  .lg-fee-3 { color: var(--danger); }
+  .lg-p-0 { color: var(--down); }
+  .lg-p-1 { color: var(--warn); }
+  .lg-p-2 { color: #ea580c; }
+  .lg-p-3 { color: var(--danger); }
+
+  /* —— table —— */
+  .table-shell {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 32px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    min-width: 1100px;
+  }
+  thead th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+    user-select: none;
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+  }
+  thead th.sortable { cursor: pointer; }
+  thead th.sortable:hover { color: var(--fg); }
+  thead th.is-sort { color: var(--fg); }
+  thead th .arr {
+    font-family: var(--mono);
+    font-size: 10px;
+    margin-left: 3px;
+    opacity: 0.7;
+  }
+  tbody td {
+    padding: 11px 10px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: color-mix(in srgb, var(--fg) 3%, transparent); }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .code { font-family: var(--mono); font-weight: 500; }
+  .name { font-weight: 500; }
+  .dim { color: var(--muted); }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .fee-0 { color: var(--down); font-weight: 600; }
+  .fee-1 { color: #65a30d; font-weight: 600; }
+  .fee-2 { color: var(--warn); font-weight: 600; }
+  .fee-3 { color: var(--danger); font-weight: 600; }
+  .p-0 { color: var(--down); font-weight: 600; }
+  .p-1 { color: var(--warn); font-weight: 600; }
+  .p-2 { color: #ea580c; font-weight: 600; }
+  .p-3 { color: var(--danger); font-weight: 600; }
+  .ex {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 6px;
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .bar {
+    display: block;
+    height: 2px;
+    background: var(--line);
+    margin-top: 5px;
+    width: 72px;
+    position: relative;
+  }
+  .bar > i {
+    display: block;
+    height: 100%;
+    background: var(--fg);
+    opacity: 0.55;
+  }
+  .detail-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 8px;
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+    transition: color .12s, border-color .12s;
+  }
+  .detail-btn:hover { color: var(--fg); border-color: var(--fg); }
+  .detail-btn:active { transform: translateY(1px); }
+  .empty {
+    text-align: center;
+    padding: 40px 16px;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  /* —— charts —— */
+  .charts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    margin-bottom: 32px;
+  }
+  .chart {
+    padding: 16px 16px 12px;
+    border-right: 1px solid var(--line);
+    min-width: 0;
+  }
+  .chart:last-child { border-right: 0; }
+  .chart h3 {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 12px;
+    letter-spacing: 0.02em;
+  }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .chart .axis { stroke: var(--line); stroke-width: 1; }
+  .chart .bar-fill { fill: var(--fg); opacity: 0.72; }
+  .chart .bar-fill.alt { opacity: 0.35; }
+  .chart .bar-fill.warn { fill: var(--danger); opacity: 0.75; }
+  .chart .lbl {
+    fill: var(--muted);
+    font-family: var(--sans);
+    font-size: 10px;
+  }
+  .chart .tick {
+    fill: var(--muted);
+    font-family: var(--mono);
+    font-size: 9px;
+  }
+
+  /* —— insights —— */
+  .insights {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    padding: 20px 22px;
+    margin-bottom: 32px;
+  }
+  .insights h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+  }
+  .insight {
+    font-size: 13px;
+    color: var(--fg);
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    line-height: 1.65;
+  }
+  .insight:first-of-type { border-top: 0; padding-top: 0; }
+  .insight b { font-weight: 600; }
+  .insight .note {
+    display: block;
+    margin-top: 4px;
+    color: var(--warn);
+    font-size: 12px;
+  }
+  .hl {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 8px;
+  }
+
+  /* —— footer —— */
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+    color: var(--muted);
+    font-size: 11.5px;
+    line-height: 1.7;
+  }
+  footer strong { color: var(--fg); font-weight: 500; }
+  .foot-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  /* —— modal —— */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 50;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    width: min(560px, 100%);
+    max-height: min(80dvh, 720px);
+    overflow: auto;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    padding: 0;
+  }
+  .modal-h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+  }
+  .modal-h h2 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .modal-x {
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    font-size: 20px;
+    color: var(--muted);
+    line-height: 1;
+  }
+  .modal-x:hover { color: var(--fg); }
+  .modal-b { padding: 8px 18px 18px; }
+  .kv {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 0 16px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .kv:last-child { border-bottom: 0; }
+  .kv .k { color: var(--muted); font-size: 12px; }
+  .kv .v { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 900px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stat:nth-child(2) { border-right: 0; }
+    .stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--line); }
+    .charts { grid-template-columns: 1fr; }
+    .chart { border-right: 0; border-bottom: 1px solid var(--line); }
+    .chart:last-child { border-bottom: 0; }
+    .search { flex: 1 1 100%; }
+  }
+  @media (max-width: 520px) {
+    .stats { grid-template-columns: 1fr; }
+    .stat { border-right: 0; border-bottom: 1px solid var(--line); }
+    .stat:last-child { border-bottom: 0; }
+    .stat .v { font-size: 22px; }
+    .brand .sub { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+
+  .series-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    margin: 16px 0 0;
+    width: fit-content;
+    max-width: 100%;
+  }
+  .series-btn {
+    padding: 8px 16px;
+    font-size: 12.5px;
+    color: var(--muted);
+    border-right: 1px solid var(--line);
+    font-weight: 400;
+  }
+  .series-btn:last-child { border-right: 0; }
+  .series-btn[aria-pressed="true"] {
+    color: var(--fg);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--fg) 4%, transparent);
+  }
+  .series-btn:hover { color: var(--fg); }
+  .tag-series {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 1px 5px;
+    border: 1px solid var(--line-strong);
+    color: var(--muted);
+    margin-left: 6px;
+    vertical-align: 1px;
+    letter-spacing: 0.02em;
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand">
+        <mark aria-hidden="true">US</mark>
+        <h1>美股宽基 ETF</h1>
+        <span class="sub">纳指100 · 标普500 · 场内对比</span>
+      </div>
+      </div>
+  </header>
+
+  <main class="wrap">
+    <div class="strip" id="marketStatus">
+      <span class="pill closed" id="aShareStatus"><span class="dot"></span>A股 <span id="aShareText">—</span> <span id="aShareTime"></span></span>
+      <span class="pill closed" id="usStockStatus"><span class="dot"></span>美股 <span id="usStockText">—</span> <span id="usStockTime"></span></span>
+      <span class="refresh" id="refreshText" data-live="0">行情待同步</span>
+    </div>
+
+    <div class="series-bar" role="group" aria-label="指数">
+      <button type="button" class="series-btn" data-series="ndx" aria-pressed="true">纳指100</button>
+      <button type="button" class="series-btn" data-series="spx" aria-pressed="false">标普500</button>
+      <button type="button" class="series-btn" data-series="all" aria-pressed="false">全部</button>
+    </div>
+
+    <section class="stats" id="summary" aria-label="汇总">
+      <div class="stat">
+        <div class="k">产品</div>
+        <div class="v" id="statCount">—</div>
+        <div class="s" id="statExchange">—</div>
+      </div>
+      <div class="stat">
+        <div class="k">合计规模</div>
+        <div class="v" id="statSize">—</div>
+        <div class="s">亿元 · NAV 口径</div>
+      </div>
+      <div class="stat">
+        <div class="k">费率区间</div>
+        <div class="v" id="statFee">—</div>
+        <div class="s" id="statFeeSub">%/年</div>
+      </div>
+      <div class="stat">
+        <div class="k">平均溢价</div>
+        <div class="v" id="statPrem">—</div>
+        <div class="s" id="statPremSub">—</div>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="筛选">
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-sort="totalFee" data-order="asc" aria-selected="true">总费率</button>
+        <button class="tab" role="tab" data-sort="size" data-order="desc" aria-selected="false">规模</button>
+        <button class="tab" role="tab" data-sort="premium" data-order="desc" aria-selected="false">溢价</button>
+        <button class="tab" role="tab" data-sort="marketValue" data-order="desc" aria-selected="false">市值</button>
+        <button class="tab" role="tab" data-sort="establishDate" data-order="asc" aria-selected="false">成立</button>
+        <button class="tab" role="tab" data-sort="dailyVolume" data-order="desc" aria-selected="false">日均成交</button>
+      </div>
+      <div class="search">
+        <label class="sr-only" for="searchInput" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">搜索</label>
+        <input id="searchInput" type="search" placeholder="搜索名称 / 代码 / 公司" autocomplete="off">
+      </div>
+    </section>
+
+    <div class="legend" aria-hidden="true">
+      <span class="lg-fee-0"><i></i>费率 0.60</span>
+      <span class="lg-fee-1"><i></i>0.65</span>
+      <span class="lg-fee-2"><i></i>0.80</span>
+      <span class="lg-fee-3"><i></i>1.00</span>
+      <span class="lg-p-3"><i></i>溢价 ≥12%</span>
+      <span class="lg-p-2"><i></i>8–12</span>
+      <span class="lg-p-1"><i></i>3–8</span>
+      <span class="lg-p-0"><i></i>0–3</span>
+    </div>
+
+    <section class="table-shell" aria-label="对比表">
+      <table class="etf-table" id="etfTable">
+        <thead>
+          <tr>
+            <th class="sortable" data-sort="totalFee">总费率</th>
+            <th class="sortable" data-sort="code">代码</th>
+            <th class="sortable" data-sort="name">简称</th>
+            <th class="sortable" data-sort="company">公司</th>
+            <th class="sortable" data-sort="latestPrice">最新价</th>
+            <th class="sortable" data-sort="changePct">涨跌</th>
+            <th class="sortable" data-sort="nav">净值</th>
+            <th class="sortable" data-sort="premium">溢价</th>
+            <th class="sortable" data-sort="size">规模(亿)</th>
+            <th class="sortable" data-sort="marketValue">市值(亿)</th>
+            <th class="sortable" data-sort="dailyVolume">日均成交</th>
+            <th class="sortable" data-sort="establishDate">成立</th>
+            <th class="sortable" data-sort="exchange">市场</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr><td colspan="14" class="empty">加载中…</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="charts" aria-label="图表">
+      <div class="chart">
+        <h3>费率 %</h3>
+        <div id="feeChart"></div>
+      </div>
+      <div class="chart">
+        <h3>溢价率 %</h3>
+        <div id="premiumChart"></div>
+      </div>
+      <div class="chart">
+        <h3>规模 vs 市值</h3>
+        <div id="sizeChart"></div>
+      </div>
+    </section>
+
+    <section class="insights" aria-label="要点">
+      <h2>要点</h2>
+      <div id="insightContent"></div>
+    </section>
+
+    <footer>
+      <p><strong>风险提示</strong>　场内价约 5 秒实时刷新；溢价率 =（场内最新价 − 最新披露单位净值）/ 单位净值，QDII 净值 T+1 披露，净值落后时溢价仅供参考（详情弹层附东财 IOPV 官方溢价）。规模、费率、申购状态以基金公司最新公告为准。本页仅供查询参考，不构成投资建议。</p>
+      <div class="foot-row">
+        <span>来源 · 东财 / 天天基金 / 公告</span>
+        <span>行情 · 约 5s 刷新</span>
+        <span>© 2026 美股宽基 ETF</span>
+      </div>
+    </footer>
+  </main>
+
+  <div class="overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-h">
+        <h2 id="modalTitle">详情</h2>
+        <button type="button" class="modal-x" id="modalClose" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-b" id="modalBody"></div>
+    </div>
+  </div>
+
+<script>
+const EMBEDDED_DATA = [{"code": "513100", "market": "1", "exchange": "上交所", "name": "纳指ETF国泰", "company": "国泰基金", "manageFee": 0.6, "custodyFee": 0.2, "totalFee": 0.8, "size": 194.68, "dailyVolume": 8.88, "establishDate": "2013-04-25", "manager": "艾小军", "status": "暂停申购", "trackingIndex": "纳斯达克100指数", "latestPrice": 2.222, "changePct": 0.32, "todayTurnover": 1.83, "prevClose": 2.215, "high": 2.224, "low": 2.203, "nav": 1.9882, "navDate": "2026-08-06", "navChange": -0.39, "premium": 11.76, "marketValue": 217.57, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 8.55, "iopvPrem": 8.55, "navLatest": 2.0047, "navLatestDate": "2026-08-10"}, {"code": "159941", "market": "0", "exchange": "深交所", "name": "纳指ETF广发", "company": "广发基金", "manageFee": 0.8, "custodyFee": 0.2, "totalFee": 1.0, "size": 339.92, "dailyVolume": 21.34, "establishDate": "2015-06-10", "manager": "刘杰", "status": "可申购", "trackingIndex": "纳斯达克100指数", "latestPrice": 1.663, "changePct": 0.24, "todayTurnover": 3.33, "prevClose": 1.659, "high": 1.665, "low": 1.652, "nav": 1.489, "navDate": "2026-08-06", "navChange": -0.38, "premium": 11.69, "marketValue": 379.64, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 9.34, "iopvPrem": 9.41, "navLatest": 1.5012, "navLatestDate": "2026-08-10"}, {"code": "513300", "market": "1", "exchange": "上交所", "name": "纳斯达克ETF华夏", "company": "华夏基金", "manageFee": 0.6, "custodyFee": 0.2, "totalFee": 0.8, "size": 125.59, "dailyVolume": 3.84, "establishDate": "2020-10-22", "manager": "赵宗庭", "status": "可申购", "trackingIndex": "纳斯达克100指数", "latestPrice": 2.698, "changePct": 0.19, "todayTurnover": 1.75, "prevClose": 2.693, "high": 2.7, "low": 2.678, "nav": 2.4686, "navDate": "2026-08-06", "navChange": -0.34, "premium": 9.29, "marketValue": 137.26, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 7.96, "iopvPrem": 7.96, "navLatest": 2.4873, "navLatestDate": "2026-08-10"}, {"code": "159632", "market": "0", "exchange": "深交所", "name": "纳斯达克ETF华安", "company": "华安基金", "manageFee": 0.6, "custodyFee": 0.2, "totalFee": 0.8, "size": 106.85, "dailyVolume": 3.39, "establishDate": "2022-07-21", "manager": "倪斌", "status": "暂停", "trackingIndex": "纳斯达克100指数", "latestPrice": 2.468, "changePct": 0.37, "todayTurnover": 1.37, "prevClose": 2.459, "high": 2.473, "low": 2.445, "nav": 2.258, "navDate": "2026-08-06", "navChange": -0.38, "premium": 9.3, "marketValue": 116.79, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 8.48, "iopvPrem": 8.44, "navLatest": 2.2767, "navLatestDate": "2026-08-10"}, {"code": "159501", "market": "0", "exchange": "深交所", "name": "纳指ETF嘉实", "company": "嘉实基金", "manageFee": 0.5, "custodyFee": 0.1, "totalFee": 0.6, "size": 119.34, "dailyVolume": 1.21, "establishDate": "2023-05-31", "manager": "—", "status": "可申购", "trackingIndex": "纳斯达克100指数", "latestPrice": 2.087, "changePct": 0.0, "todayTurnover": 0.7, "prevClose": 2.087, "high": 2.089, "low": 2.074, "nav": 1.8671, "navDate": "2026-08-06", "navChange": -0.38, "premium": 11.78, "marketValue": 133.4, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 9.5, "iopvPrem": 9.5, "navLatest": 1.8826, "navLatestDate": "2026-08-10"}, {"code": "159659", "market": "0", "exchange": "深交所", "name": "纳斯达克100ETF招商", "company": "招商基金", "manageFee": 0.5, "custodyFee": 0.15, "totalFee": 0.65, "size": 93.83, "dailyVolume": 2.68, "establishDate": "2023-04-12", "manager": "刘重杰", "status": "可申购", "trackingIndex": "纳斯达克100指数", "latestPrice": 2.348, "changePct": 0.21, "todayTurnover": 1.28, "prevClose": 2.343, "high": 2.349, "low": 2.328, "nav": 2.1471, "navDate": "2026-08-06", "navChange": -0.38, "premium": 9.36, "marketValue": 102.61, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 8.7, "iopvPrem": 8.65, "navLatest": 2.1648, "navLatestDate": "2026-08-10"}, {"code": "159513", "market": "0", "exchange": "深交所", "name": "纳斯达克100ETF大成", "company": "大成基金", "manageFee": 0.8, "custodyFee": 0.2, "totalFee": 1.0, "size": 70.84, "dailyVolume": 1.42, "establishDate": "2023-07-12", "manager": "冉凌浩", "status": "可申购", "trackingIndex": "纳斯达克100指数", "latestPrice": 1.811, "changePct": 0.33, "todayTurnover": 0.78, "prevClose": 1.805, "high": 1.812, "low": 1.793, "nav": 1.6611, "navDate": "2026-08-06", "navChange": -0.38, "premium": 9.02, "marketValue": 77.23, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 7.09, "iopvPrem": 7.03, "navLatest": 1.6748, "navLatestDate": "2026-08-10"}, {"code": "513110", "market": "1", "exchange": "上交所", "name": "纳指ETF华泰柏瑞", "company": "华泰柏瑞基金", "manageFee": 0.8, "custodyFee": 0.2, "totalFee": 1.0, "size": 48.14, "dailyVolume": 2.21, "establishDate": "2023-03-01", "manager": "柳军/李沐阳", "status": "可申购", "trackingIndex": "纳斯达克100指数", "latestPrice": 2.489, "changePct": 0.2, "todayTurnover": 0.81, "prevClose": 2.484, "high": 2.492, "low": 2.469, "nav": 2.2831, "navDate": "2026-08-06", "navChange": -0.38, "premium": 9.02, "marketValue": 52.48, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 7.98, "iopvPrem": 7.94, "navLatest": 2.3018, "navLatestDate": "2026-08-10"}, {"code": "159696", "market": "0", "exchange": "深交所", "name": "纳指ETF易方达", "company": "易方达基金", "manageFee": 0.5, "custodyFee": 0.1, "totalFee": 0.6, "size": 48.47, "dailyVolume": 0.69, "establishDate": "2023-08-17", "manager": "林伟斌", "status": "暂停", "trackingIndex": "纳斯达克100指数", "latestPrice": 2.038, "changePct": 0.05, "todayTurnover": 0.29, "prevClose": 2.037, "high": 2.043, "low": 2.027, "nav": 1.8503, "navDate": "2026-08-06", "navChange": -0.38, "premium": 10.14, "marketValue": 53.39, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 7.83, "iopvPrem": 7.77, "navLatest": 1.8657, "navLatestDate": "2026-08-10"}, {"code": "159660", "market": "0", "exchange": "深交所", "name": "纳指ETF汇添富", "company": "汇添富基金", "manageFee": 0.5, "custodyFee": 0.15, "totalFee": 0.65, "size": 47.37, "dailyVolume": 1.33, "establishDate": "2023-03-30", "manager": "过蓓蓓", "status": "可申购", "trackingIndex": "纳斯达克100指数", "latestPrice": 2.373, "changePct": 0.21, "todayTurnover": 0.72, "prevClose": 2.368, "high": 2.374, "low": 2.346, "nav": 2.1723, "navDate": "2026-08-06", "navChange": -0.38, "premium": 9.24, "marketValue": 51.75, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 8.01, "iopvPrem": 7.96, "navLatest": 2.1903, "navLatestDate": "2026-08-10"}, {"code": "513390", "market": "1", "exchange": "上交所", "name": "纳指100ETF博时", "company": "博时基金", "manageFee": 0.5, "custodyFee": 0.15, "totalFee": 0.65, "size": 44.3, "dailyVolume": 2.13, "establishDate": "2023-04-19", "manager": "—", "status": "可申购", "trackingIndex": "纳斯达克100指数", "latestPrice": 2.434, "changePct": 0.21, "todayTurnover": 0.85, "prevClose": 2.429, "high": 2.435, "low": 2.414, "nav": 2.2315, "navDate": "2026-08-06", "navChange": -0.38, "premium": 9.07, "marketValue": 48.32, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 7.65, "iopvPrem": 7.65, "navLatest": 2.25, "navLatestDate": "2026-08-10"}, {"code": "513870", "market": "1", "exchange": "上交所", "name": "纳指ETF富国", "company": "富国基金", "manageFee": 0.5, "custodyFee": 0.1, "totalFee": 0.6, "size": 24.78, "dailyVolume": 1.42, "establishDate": "2023-10-25", "manager": "—", "status": "可申购", "trackingIndex": "纳斯达克100指数", "latestPrice": 2.068, "changePct": 0.19, "todayTurnover": 0.53, "prevClose": 2.064, "high": 2.07, "low": 2.05, "nav": 1.8931, "navDate": "2026-08-06", "navChange": -0.38, "premium": 9.24, "marketValue": 27.07, "updateTime": "2026-08-12 13:46:46", "series": "ndx", "seriesName": "纳指100", "officialPrem": 7.7, "iopvPrem": 7.65, "navLatest": 1.9088, "navLatestDate": "2026-08-10"}, {"code": "513500", "market": "1", "exchange": "上交所", "name": "标普500ETF博时", "company": "博时基金", "manageFee": 0.6, "custodyFee": 0.2, "totalFee": 0.8, "size": 239.99, "dailyVolume": 6.82, "establishDate": "2013-12-05", "manager": "万琼", "status": "可申购", "trackingIndex": "标准普尔500指数", "series": "spx", "seriesName": "标普500", "nav": 2.4872, "navDate": "2026-08-10", "navChange": -0.09, "latestPrice": 2.698, "changePct": -0.66, "high": 2.716, "low": 2.681, "prevClose": 2.716, "todayTurnover": 4.16, "premium": 8.48, "marketValue": 260.33, "updateTime": "2026-08-12 13:46:46", "officialPrem": 10.7, "iopvPrem": 10.57, "navLatest": 2.4872, "navLatestDate": "2026-08-10"}, {"code": "513650", "market": "1", "exchange": "上交所", "name": "标普500ETF南方", "company": "南方基金", "manageFee": 0.6, "custodyFee": 0.15, "totalFee": 0.75, "size": 76.94, "dailyVolume": 3.27, "establishDate": "2023-03-23", "manager": "张其思", "status": "可申购", "trackingIndex": "标准普尔500指数", "series": "spx", "seriesName": "标普500", "nav": 1.8955, "navDate": "2026-08-10", "navChange": -0.08, "latestPrice": 2.011, "changePct": -0.59, "high": 2.022, "low": 2.005, "prevClose": 2.023, "todayTurnover": 1.39, "premium": 6.09, "marketValue": 81.63, "updateTime": "2026-08-12 13:46:46", "officialPrem": 10.54, "iopvPrem": 10.37, "navLatest": 1.8955, "navLatestDate": "2026-08-10"}, {"code": "159655", "market": "0", "exchange": "深交所", "name": "标普500ETF华夏", "company": "华夏基金", "manageFee": 0.6, "custodyFee": 0.15, "totalFee": 0.75, "size": 39.37, "dailyVolume": 1.74, "establishDate": "2022-10-12", "manager": "赵宗庭", "status": "可申购", "trackingIndex": "标准普尔500指数", "series": "spx", "seriesName": "标普500", "nav": 1.9022, "navDate": "2026-08-10", "navChange": -0.1, "latestPrice": 2.018, "changePct": -0.59, "high": 2.029, "low": 2.01, "prevClose": 2.03, "todayTurnover": 1.12, "premium": 6.09, "marketValue": 41.77, "updateTime": "2026-08-12 13:46:46", "officialPrem": 9.55, "iopvPrem": 9.55, "navLatest": 1.9022, "navLatestDate": "2026-08-10"}, {"code": "159612", "market": "0", "exchange": "深交所", "name": "标普500ETF国泰", "company": "国泰基金", "manageFee": 0.6, "custodyFee": 0.15, "totalFee": 0.75, "size": 8.44, "dailyVolume": 0.2, "establishDate": "2022-05-09", "manager": "艾小军", "status": "暂停申购", "trackingIndex": "标准普尔500指数", "series": "spx", "seriesName": "标普500", "nav": 1.9517, "navDate": "2026-08-10", "navChange": -0.09, "latestPrice": 2.08, "changePct": -0.57, "high": 2.092, "low": 2.066, "prevClose": 2.092, "todayTurnover": 0.36, "premium": 6.57, "marketValue": 8.99, "updateTime": "2026-08-12 13:46:46", "officialPrem": 9.7, "iopvPrem": 9.7, "navLatest": 1.9517, "navLatestDate": "2026-08-10"}, {"code": "161125", "market": "0", "exchange": "深交所", "name": "标普500LOF易方达", "company": "易方达基金", "manageFee": 0.8, "custodyFee": 0.2, "totalFee": 1.0, "size": 15.43, "dailyVolume": 0.31, "establishDate": "2016-12-02", "manager": "刘依姗", "status": "暂停申购", "trackingIndex": "标准普尔500指数", "series": "spx", "seriesName": "标普500", "nav": 3.1856, "navDate": "2026-08-10", "navChange": -0.08, "latestPrice": 3.25, "changePct": -0.06, "high": 3.254, "low": 3.24, "prevClose": 3.252, "todayTurnover": 0.18, "premium": 2.02, "marketValue": 15.74, "updateTime": "2026-08-12 13:46:46", "officialPrem": 6.77, "iopvPrem": 6.84, "navLatest": 3.1856, "navLatestDate": "2026-08-10"}];
+
+let etfData = [];
+let currentSort = "totalFee";
+let currentOrder = "asc";
+let currentSeries = "ndx";
+let refreshTimer = null;
+
+function cloneData() {
+  etfData = JSON.parse(JSON.stringify(EMBEDDED_DATA));
+}
+
+function feeClass(fee) {
+  if (fee <= 0.6) return "fee-0";
+  if (fee <= 0.65) return "fee-1";
+  if (fee <= 0.8) return "fee-2";
+  return "fee-3";
+}
+function premClass(p) {
+  if (p == null) return "";
+  if (p >= 12) return "p-3";
+  if (p >= 8) return "p-2";
+  if (p >= 3) return "p-1";
+  return "p-0";
+}
+function chgClass(v) {
+  if (v == null || isNaN(v)) return "dim";
+  if (v > 0) return "up";
+  if (v < 0) return "down";
+  return "dim";
+}
+function fmtChg(v) {
+  if (v == null || isNaN(v)) return "—";
+  const s = (v > 0 ? "+" : "") + Number(v).toFixed(2) + "%";
+  return s;
+}
+function fmtPrem(v) {
+  if (v == null || isNaN(v)) return "—";
+  return Number(v).toFixed(2) + "%";
+}
+function shortName(name) {
+  if (!name) return "—";
+  let s = String(name);
+  s = s
+    .replace(/纳斯达克100\s*ETF/g, "纳指")
+    .replace(/纳斯达克\s*ETF/g, "纳指")
+    .replace(/纳指100\s*ETF/g, "纳指")
+    .replace(/纳指\s*ETF/g, "纳指")
+    .replace(/标普500\s*ETF/g, "标普")
+    .replace(/标普500\s*LOF/g, "标普LOF")
+    .replace(/标普500/g, "标普")
+    .replace(/发起式?/g, "")
+    .replace(/\s+/g, "");
+  // 公司名保留在末尾：纳指国泰 / 标普博时
+  return s || name;
+}
+function chartLabel(e) {
+  return shortName(e.name || e.code);
+}
+function activeData() {
+  if (currentSeries === "all") return etfData.slice();
+  return etfData.filter(e => (e.series || "ndx") === currentSeries);
+}
+function bar(val, max) {
+  if (!val || val <= 0) return "";
+  const pct = Math.min((val / max) * 100, 100);
+  return '<span class="bar" aria-hidden="true"><i style="width:' + pct.toFixed(1) + '%"></i></span>';
+}
+
+function renderSummary() {
+  const src = activeData();
+  const n = src.length;
+  const totalSize = src.reduce((s, e) => s + (e.size || 0), 0);
+  const fees = src.map(e => e.totalFee).filter(v => v != null);
+  const minF = fees.length ? Math.min(...fees) : 0;
+  const maxF = fees.length ? Math.max(...fees) : 0;
+  const prems = src.map(e => e.premium).filter(v => v != null);
+  const avgP = prems.length ? prems.reduce((a, b) => a + b, 0) / prems.length : 0;
+  const sh = src.filter(e => e.exchange === "上交所").length;
+  const sz = src.filter(e => e.exchange === "深交所").length;
+
+  document.getElementById("statCount").textContent = String(n);
+  document.getElementById("statExchange").textContent = "上交所 " + sh + " · 深交所 " + sz;
+  document.getElementById("statSize").innerHTML = totalSize.toFixed(0) + "<small>亿</small>";
+  document.getElementById("statFee").innerHTML = minF.toFixed(2) + "<small>–" + maxF.toFixed(2) + "</small>";
+  document.getElementById("statFeeSub").textContent = "差 " + (maxF - minF).toFixed(2) + "% / 年";
+  document.getElementById("statPrem").innerHTML = avgP.toFixed(2) + "<small>%</small>";
+  document.getElementById("statPremSub").textContent =
+    "最高 " + Math.max(...prems).toFixed(2) + "% · 最低 " + Math.min(...prems).toFixed(2) + "%";
+}
+
+function getFilteredSorted() {
+  const q = (document.getElementById("searchInput").value || "").trim().toLowerCase();
+  let list = activeData().filter(e => {
+    if (!q) return true;
+    return (e.name || "").toLowerCase().includes(q) ||
+      (e.code || "").toLowerCase().includes(q) ||
+      (e.company || "").toLowerCase().includes(q) ||
+      (e.seriesName || "").toLowerCase().includes(q);
+  });
+  list.sort((a, b) => {
+    if (currentSort === "establishDate") {
+      const va = a.establishDate || "9999";
+      const vb = b.establishDate || "9999";
+      return currentOrder === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+    }
+    if (["name", "company", "code", "exchange"].includes(currentSort)) {
+      const va = String(a[currentSort] || "");
+      const vb = String(b[currentSort] || "");
+      return currentOrder === "asc" ? va.localeCompare(vb, "zh") : vb.localeCompare(va, "zh");
+    }
+    let va = parseFloat(a[currentSort]);
+    let vb = parseFloat(b[currentSort]);
+    if (isNaN(va)) va = -1;
+    if (isNaN(vb)) vb = -1;
+    return currentOrder === "asc" ? va - vb : vb - va;
+  });
+  return list;
+}
+
+function renderTable() {
+  const list = getFilteredSorted();
+  const tbody = document.getElementById("tbody");
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="14" class="empty">无匹配</td></tr>';
+    return;
+  }
+  const pool = activeData();
+  const maxSize = Math.max(...pool.map(e => e.size || 0), 1);
+  const maxMv = Math.max(...pool.map(e => e.marketValue || 0), 1);
+  const maxVol = Math.max(...pool.map(e => e.dailyVolume || 0), 1);
+  const showSeriesTag = currentSeries === "all";
+
+  tbody.innerHTML = list.map(e => {
+    const fc = feeClass(e.totalFee);
+    const pc = premClass(e.premium);
+    const cc = chgClass(e.changePct);
+    const seriesTag = showSeriesTag
+      ? '<span class="tag-series">' + esc((e.seriesName || e.series || "").replace("纳指100","NDX").replace("标普500","SPX")) + '</span>'
+      : "";
+    return (
+      '<tr data-code="' + e.code + '">' +
+      '<td class="num ' + fc + '">' + (e.totalFee || 0).toFixed(2) + '%</td>' +
+      '<td class="code">' + e.code + '</td>' +
+      '<td class="name">' + esc(e.name || "—") + seriesTag + '</td>' +
+      '<td class="dim">' + (e.company || "—") + '</td>' +
+      '<td class="num" data-field="latestPrice">' + (e.latestPrice != null ? Number(e.latestPrice).toFixed(3) : "—") + '</td>' +
+      '<td class="num ' + cc + '" data-field="changePct">' + fmtChg(e.changePct) + '</td>' +
+      '<td class="num dim" data-field="nav" title="' + (e.navDate ? ("净值日 " + e.navDate) : "") + '">' + (e.nav != null ? Number(e.nav).toFixed(4) : "—") + '</td>' +
+      '<td class="num ' + pc + '" data-field="premium">' + fmtPrem(e.premium) + '</td>' +
+      '<td class="num">' + (e.size || 0).toFixed(2) + bar(e.size, maxSize) + '</td>' +
+      '<td class="num">' + (e.marketValue || 0).toFixed(2) + bar(e.marketValue, maxMv) + '</td>' +
+      '<td class="num">' + (e.dailyVolume || 0).toFixed(2) + bar(e.dailyVolume, maxVol) + '</td>' +
+      '<td class="num dim">' + (e.establishDate || "—") + '</td>' +
+      '<td><span class="ex">' + (e.exchange === "上交所" ? "SH" : "SZ") + '</span></td>' +
+      '<td><button type="button" class="detail-btn" data-code="' + e.code + '">详情</button></td>' +
+      '</tr>'
+    );
+  }).join("");
+
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.classList.toggle("is-sort", th.dataset.sort === currentSort);
+    const old = th.querySelector(".arr");
+    if (old) old.remove();
+    if (th.dataset.sort === currentSort) {
+      const a = document.createElement("span");
+      a.className = "arr";
+      a.textContent = currentOrder === "asc" ? "↑" : "↓";
+      th.appendChild(a);
+    }
+  });
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.setAttribute("aria-selected", tab.dataset.sort === currentSort ? "true" : "false");
+  });
+}
+
+function svgBars(items, opts) {
+  // items: [{label, value, warn?}]
+  const W = 360, H = 220;
+  const padL = 28, padR = 8, padT = 8, padB = 72;
+  const maxV = Math.max(...items.map(i => i.value), 0.01);
+  const n = items.length;
+  const gap = 4;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const bw = Math.max(4, (plotW - gap * (n - 1)) / n);
+
+  let bars = "";
+  let labels = "";
+  items.forEach((it, i) => {
+    const h = (it.value / maxV) * plotH;
+    const x = padL + i * (bw + gap);
+    const y = padT + plotH - h;
+    const cls = it.warn ? "bar-fill warn" : (it.alt ? "bar-fill alt" : "bar-fill");
+    bars += '<rect class="' + cls + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) +
+      '" width="' + bw.toFixed(1) + '" height="' + Math.max(h, 0.5).toFixed(1) + '" />';
+    const lx = x + bw / 2;
+    labels += '<text class="lbl" x="' + lx.toFixed(1) + '" y="' + (H - 52) +
+      '" text-anchor="middle" transform="rotate(-48 ' + lx.toFixed(1) + ' ' + (H - 52) + ')">' +
+      esc(it.label) + '</text>';
+  });
+
+  const yTicks = [0, 0.5, 1].map(t => {
+    const v = maxV * t;
+    const y = padT + plotH - t * plotH;
+    return '<line class="axis" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y +
+      '" stroke-dasharray="2 3" opacity="0.6"/>' +
+      '<text class="tick" x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end">' +
+      (opts.fmt ? opts.fmt(v) : v.toFixed(1)) + '</text>';
+  }).join("");
+
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(opts.title || "") + '">' +
+    yTicks + bars + labels + '</svg>';
+}
+
+function svgGrouped(items) {
+  // items: [{label, a, b}]
+  const W = 360, H = 220;
+  const padL = 28, padR = 8, padT = 8, padB = 72;
+  const maxV = Math.max(...items.flatMap(i => [i.a, i.b]), 0.01);
+  const n = items.length;
+  const gap = 6;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const groupW = (plotW - gap * (n - 1)) / n;
+  const bw = Math.max(3, (groupW - 2) / 2);
+
+  let bars = "";
+  let labels = "";
+  items.forEach((it, i) => {
+    const gx = padL + i * (groupW + gap);
+    const ha = (it.a / maxV) * plotH;
+    const hb = (it.b / maxV) * plotH;
+    const ya = padT + plotH - ha;
+    const yb = padT + plotH - hb;
+    bars += '<rect class="bar-fill" x="' + gx.toFixed(1) + '" y="' + ya.toFixed(1) +
+      '" width="' + bw.toFixed(1) + '" height="' + Math.max(ha, 0.5).toFixed(1) + '" />';
+    bars += '<rect class="bar-fill alt" x="' + (gx + bw + 2).toFixed(1) + '" y="' + yb.toFixed(1) +
+      '" width="' + bw.toFixed(1) + '" height="' + Math.max(hb, 0.5).toFixed(1) + '" />';
+    const lx = gx + groupW / 2;
+    labels += '<text class="lbl" x="' + lx.toFixed(1) + '" y="' + (H - 52) +
+      '" text-anchor="middle" transform="rotate(-48 ' + lx.toFixed(1) + ' ' + (H - 52) + ')">' +
+      esc(it.label) + '</text>';
+  });
+
+  const yTicks = [0, 0.5, 1].map(t => {
+    const v = maxV * t;
+    const y = padT + plotH - t * plotH;
+    return '<line class="axis" x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y + '" y2="' + y +
+      '" stroke-dasharray="2 3" opacity="0.6"/>' +
+      '<text class="tick" x="' + (padL - 4) + '" y="' + (y + 3) + '" text-anchor="end">' +
+      v.toFixed(0) + '</text>';
+  }).join("");
+
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="规模与市值">' +
+    yTicks + bars + labels + '</svg>';
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function renderCharts() {
+  const src = activeData();
+  if (!src.length) {
+    document.getElementById("feeChart").innerHTML = "";
+    document.getElementById("premiumChart").innerHTML = "";
+    document.getElementById("sizeChart").innerHTML = "";
+    return;
+  }
+  const byFee = src.slice().sort((a, b) => (a.totalFee || 0) - (b.totalFee || 0));
+  document.getElementById("feeChart").innerHTML = svgBars(
+    byFee.map(e => ({ label: chartLabel(e), value: e.totalFee || 0, warn: (e.totalFee || 0) >= 1 })),
+    { title: "费率", fmt: v => v.toFixed(1) }
+  );
+
+  const byPrem = src.slice().sort((a, b) => (b.premium || 0) - (a.premium || 0));
+  document.getElementById("premiumChart").innerHTML = svgBars(
+    byPrem.map(e => ({ label: chartLabel(e), value: e.premium || 0, warn: (e.premium || 0) >= 12 })),
+    { title: "溢价", fmt: v => v.toFixed(0) }
+  );
+
+  const bySize = src.slice().sort((a, b) => (b.size || 0) - (a.size || 0));
+  document.getElementById("sizeChart").innerHTML = svgGrouped(
+    bySize.map(e => ({ label: chartLabel(e), a: e.size || 0, b: e.marketValue || 0 }))
+  );
+}
+
+function renderInsights() {
+  const src = activeData();
+  if (!src.length) {
+    document.getElementById("insightContent").innerHTML = '<div class="insight dim">当前筛选无数据</div>';
+    return;
+  }
+  const scope = currentSeries === "spx" ? "标普500" : (currentSeries === "ndx" ? "纳指100" : "纳指+标普");
+  const biggest = src.slice().sort((a, b) => (b.size || 0) - (a.size || 0))[0];
+  const lowestFee = src.slice().sort((a, b) => (a.totalFee || 0) - (b.totalFee || 0))[0];
+  const premSorted = src.slice().sort((a, b) => (b.premium || 0) - (a.premium || 0));
+  const highestPrem = premSorted[0];
+  const lowestPrem = premSorted[premSorted.length - 1];
+  const avgPrem = src.reduce((s, e) => s + (e.premium || 0), 0) / src.length;
+  const stopCount = src.filter(e => !(e.status || "").includes("可")).length;
+  const totalSize = src.reduce((s, e) => s + (e.size || 0), 0);
+  const totalMv = src.reduce((s, e) => s + (e.marketValue || 0), 0);
+  const gap = totalSize ? ((totalMv - totalSize) / totalSize * 100).toFixed(1) : "0";
+  const lowFeeBig = src.filter(e => e.size >= 100 && e.totalFee <= 0.6);
+
+  const html = [
+    '<div class="insight"><span class="hl">溢价</span>' +
+      scope + ' ' + src.length + ' 只产品平均溢价 <b class="num up">' + avgPrem.toFixed(2) + '%</b>。' +
+      '最高 ' + esc(highestPrem.name) + '（' + fmtPrem(highestPrem.premium) + '），' +
+      '最低 ' + esc(lowestPrem.name) + '（' + fmtPrem(lowestPrem.premium) + '）。' +
+      '<span class="note">高溢价 = 场内价远高于净值，买入承担溢价回落风险。</span></div>',
+    '<div class="insight"><span class="hl">申购</span>' +
+      '当前 ' + stopCount + ' 只暂停申购；暂停后场内成唯一买入通道，供需失衡会推高溢价。' +
+      (highestPrem && (highestPrem.status || "").indexOf("暂") > -1
+        ? esc(highestPrem.name) + ' 正暂停，溢价居前。'
+        : '') +
+      '</div>',
+    '<div class="insight"><span class="hl">口径</span>' +
+      '总规模 ' + totalSize.toFixed(0) + ' 亿（NAV），总市值 ' + totalMv.toFixed(0) + ' 亿（场内价），' +
+      '市值高出规模 <b>' + gap + '%</b>，差额主要来自溢价。</div>',
+    '<div class="insight"><span class="hl">规模</span>' +
+      '最大：' + esc(biggest.name) + ' ' + (biggest.size || 0).toFixed(1) + ' 亿 · ' +
+      '费率最低：' + esc(lowestFee.name) + ' ' + (lowestFee.totalFee || 0).toFixed(2) + '%/年。' +
+      (lowFeeBig.length
+        ? ' 规模≥100 亿且费率≤0.60%：' + lowFeeBig.map(e => e.name).join("、") + '。'
+        : ' 暂无「规模≥100 亿且费率≤0.60%」组合。') +
+      '</div>'
+  ].join("");
+  document.getElementById("insightContent").innerHTML = html;
+}
+
+function renderAll() {
+  renderSummary();
+  renderTable();
+  renderCharts();
+  renderInsights();
+}
+
+function updateMarketStatus() {
+  const now = new Date();
+  const beijingOffset = 8 * 60;
+  const localOffset = now.getTimezoneOffset();
+  const bj = new Date(now.getTime() + (beijingOffset + localOffset) * 60000);
+  const day = bj.getDay();
+  const totalMins = bj.getHours() * 60 + bj.getMinutes();
+  const isWeekday = day >= 1 && day <= 5;
+  const aOpen = isWeekday && (
+    (totalMins >= 570 && totalMins <= 690) ||
+    (totalMins >= 780 && totalMins <= 900)
+  );
+  const usOpen =
+    (isWeekday && (totalMins >= 1290 || totalMins <= 240)) ||
+    (day === 5 && totalMins >= 1290) ||
+    (day === 0 && totalMins <= 240) ||
+    (day === 6 && totalMins >= 1290);
+  const timeStr = String(bj.getHours()).padStart(2, "0") + ":" + String(bj.getMinutes()).padStart(2, "0");
+
+  const aEl = document.getElementById("aShareStatus");
+  const uEl = document.getElementById("usStockStatus");
+  aEl.className = "pill " + (aOpen ? "open" : "closed");
+  uEl.className = "pill " + (usOpen ? "open" : "closed");
+  document.getElementById("aShareText").textContent = aOpen ? "交易中" : "休市";
+  document.getElementById("usStockText").textContent = usOpen ? "交易中" : "休市";
+  document.getElementById("aShareTime").textContent = timeStr + " BJ";
+  document.getElementById("usStockTime").textContent = "";
+}
+
+function showDetail(code) {
+  const e = etfData.find(d => d.code === code);
+  if (!e) return;
+  document.getElementById("modalTitle").textContent = (e.name || "") + " · " + e.code;
+  const rows = [
+    ["代码", e.code],
+    ["简称", e.name || "—"],
+    ["公司", e.company || "—"],
+    ["市场", e.exchange || "—"],
+    ["成立", e.establishDate || "—"],
+    ["经理", e.manager || "—"],
+    ["管理费", (e.manageFee || 0).toFixed(2) + "%"],
+    ["托管费", (e.custodyFee || 0).toFixed(2) + "%"],
+    ["总费率", (e.totalFee || 0).toFixed(2) + "%"],
+    ["申购", e.status || "—"],
+    ["最新价", e.latestPrice != null ? Number(e.latestPrice).toFixed(3) : "—"],
+    ["涨跌幅", fmtChg(e.changePct)],
+    ["最高 / 最低", (e.high != null ? e.high : "—") + " / " + (e.low != null ? e.low : "—")],
+    ["今成交额", e.todayTurnover != null ? e.todayTurnover + " 亿" : "—"],
+    ["净值（快照口径）", e.nav != null ? Number(e.nav).toFixed(4) : "—"],
+    ["净值日", e.navDate || "—"],
+    ["净值涨跌", fmtChg(e.navChange)],
+    ["最新披露净值", e.navLatest != null ? Number(e.navLatest).toFixed(4) + " @" + (e.navLatestDate || "") : "—"],
+    ["溢价", fmtPrem(e.premium)],
+    ["IOPV 溢价（东财）", e.iopvPrem != null ? Number(e.iopvPrem).toFixed(2) + "%" : "—"],
+    ["规模", (e.size || 0).toFixed(2) + " 亿"],
+    ["市值", e.marketValue != null ? Number(e.marketValue).toFixed(2) + " 亿" : "—"],
+    ["日均成交", (e.dailyVolume || 0).toFixed(2) + " 亿"],
+    ["跟踪", e.trackingIndex || "—"],
+    ["更新", e.updateTime || "—"]
+  ];
+  document.getElementById("modalBody").innerHTML = rows.map(r =>
+    '<div class="kv"><div class="k">' + esc(r[0]) + '</div><div class="v">' + esc(String(r[1])) + '</div></div>'
+  ).join("");
+  document.getElementById("modalOverlay").classList.add("open");
+}
+
+function closeModal() {
+  document.getElementById("modalOverlay").classList.remove("open");
+}
+
+function jsonpRequest(url, cb) {
+  const cbName = "__etf_jsonp_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
+  const sep = url.indexOf("?") >= 0 ? "&" : "?";
+  const s = document.createElement("script");
+  let done = false;
+  const timer = setTimeout(() => {
+    if (done) return;
+    done = true;
+    cleanup();
+    cb(new Error("timeout"));
+  }, 8000);
+  function cleanup() {
+    clearTimeout(timer);
+    try { delete window[cbName]; } catch (_) { window[cbName] = undefined; }
+    if (s.parentNode) s.parentNode.removeChild(s);
+  }
+  window[cbName] = function (data) {
+    if (done) return;
+    done = true;
+    cleanup();
+    cb(null, data);
+  };
+  s.onerror = function () {
+    if (done) return;
+    done = true;
+    cleanup();
+    cb(new Error("network"));
+  };
+  s.src = url + sep + "cb=" + cbName + "&callback=" + cbName;
+  document.head.appendChild(s);
+}
+
+const QUOTE_HOSTS = [
+  "https://push2delay.eastmoney.com",
+  "https://push2.eastmoney.com",
+  "https://push2delay.eastmoney.com"
+];
+let quoteHostIdx = 0;
+let navRefreshing = false;
+
+function quoteFields() {
+  // f2最新价 f3涨跌幅 f12代码 f14名称 f15最高 f16最低 f17开盘 f18昨收 f6成交额
+  return "f2,f3,f6,f12,f14,f15,f16,f17,f18";
+}
+
+function applyQuoteItem(item) {
+  const e = etfData.find(d => d.code === item.f12);
+  if (!e) return null;
+  if (item.f2 != null && item.f2 !== "-") e.latestPrice = item.f2;
+  if (item.f3 != null && item.f3 !== "-") e.changePct = item.f3;
+  // 注意：high/low 是 f15/f16，不是 f4/f5（f4=涨跌额 f5=成交量）
+  if (item.f15 != null && item.f15 !== "-") e.high = item.f15;
+  if (item.f16 != null && item.f16 !== "-") e.low = item.f16;
+  if (item.f18 != null && item.f18 !== "-") e.prevClose = item.f18;
+  if (item.f6 != null && item.f6 !== "-") e.todayTurnover = Math.round(Number(item.f6) / 1e8 * 100) / 100;
+  // 溢价率口径：最新价 vs 最新披露单位净值（QDII 净值 T+1）；f24 为东财 IOPV 官方溢价，仅详情参考
+  const offPrem = item.f24;
+  if (offPrem != null && offPrem !== "-" && Number(offPrem) !== 0) {
+    e.iopvPrem = Number(offPrem);
+  }
+  if (e.nav && e.latestPrice) {
+    e.premium = Math.round((e.latestPrice - e.nav) / e.nav * 10000) / 100;
+  }
+  if (e.size && e.nav && e.latestPrice) {
+    e.marketValue = Math.round(e.size * e.latestPrice / e.nav * 100) / 100;
+  }
+  e.updateTime = new Date().toISOString().slice(0, 19).replace("T", " ");
+  return e;
+}
+
+function flashCell(cell, dir) {
+  const cls = dir === "up" ? "flash-up" : "flash-down";
+  cell.classList.add(cls);
+  cell.addEventListener("animationend", () => cell.classList.remove(cls), { once: true });
+}
+
+function paintLiveCells() {
+  document.querySelectorAll("tr[data-code]").forEach(tr => {
+    const code = tr.dataset.code;
+    const e = etfData.find(d => d.code === code);
+    if (!e) return;
+    const priceCell = tr.querySelector('[data-field="latestPrice"]');
+    const chgCell = tr.querySelector('[data-field="changePct"]');
+    const premCell = tr.querySelector('[data-field="premium"]');
+    const navCell = tr.querySelector('[data-field="nav"]');
+    // 价格变化闪烁
+    if (priceCell && e.latestPrice != null) {
+      const oldVal = parseFloat(priceCell.textContent);
+      const newVal = Number(e.latestPrice);
+      priceCell.textContent = newVal.toFixed(3);
+      if (!isNaN(oldVal) && oldVal !== newVal) {
+        flashCell(priceCell, newVal > oldVal ? "up" : "down");
+      }
+    }
+    if (chgCell) {
+      const oldDir = chgCell.classList.contains("up") ? 1 : chgCell.classList.contains("down") ? -1 : 0;
+      const newDir = (e.changePct != null && !isNaN(e.changePct)) ? (e.changePct > 0 ? 1 : e.changePct < 0 ? -1 : 0) : 0;
+      chgCell.textContent = fmtChg(e.changePct);
+      chgCell.className = "num " + chgClass(e.changePct);
+      chgCell.setAttribute("data-field", "changePct");
+      if (oldDir !== 0 && newDir !== 0 && oldDir !== newDir) {
+        flashCell(chgCell, newDir > 0 ? "up" : "down");
+      }
+    }
+    if (premCell && e.premium != null) {
+      premCell.textContent = fmtPrem(e.premium);
+      premCell.className = "num " + premClass(e.premium);
+      premCell.setAttribute("data-field", "premium");
+    }
+    if (navCell && e.nav != null) {
+      navCell.textContent = Number(e.nav).toFixed(4);
+      navCell.title = e.navDate ? ("净值日 " + e.navDate) : "";
+    }
+  });
+  const prems = etfData.map(e => e.premium).filter(v => v != null);
+  if (prems.length) {
+    const avg = prems.reduce((a, b) => a + b, 0) / prems.length;
+    document.getElementById("statPrem").innerHTML = avg.toFixed(2) + "<small>%</small>";
+    document.getElementById("statPremSub").textContent =
+      "最高 " + Math.max(...prems).toFixed(2) + "% · 最低 " + Math.min(...prems).toFixed(2) + "%";
+  }
+}
+
+function fetchRealtime() {
+  const secids = EMBEDDED_DATA.map(e => e.market + "." + e.code).join(",");
+  const hosts = QUOTE_HOSTS;
+  const tryHost = (idx) => {
+    if (idx >= hosts.length) {
+      const text = document.getElementById("refreshText");
+      if (text) { text.textContent = "行情暂不可用 · 使用快照"; text.dataset.live = "0"; }
+      return;
+    }
+    const base = hosts[idx];
+    const isLocal = base === "LOCAL_PROXY";
+    const url = isLocal
+      ? "/api/quote?fltt=2&fields=" + quoteFields() + "&secids=" + secids
+      : base + "/api/qt/ulist.np/get?fltt=2&fields=" + quoteFields() + "&secids=" + secids;
+    // 优先 fetch（push2delay 常可 CORS），失败再 JSONP
+    fetch(url, { method: "GET", mode: "cors", cache: "no-store" })
+      .then(r => {
+        if (!r.ok) throw new Error("http " + r.status);
+        return r.json();
+      })
+      .then(data => {
+        if (!data || !data.data || !data.data.diff) throw new Error("empty");
+        quoteHostIdx = idx;
+        onQuoteData(data);
+      })
+      .catch(() => {
+        jsonpRequest(url, function (err, data) {
+          if (err || !data || !data.data || !data.data.diff) {
+            tryHost(idx + 1);
+            return;
+          }
+          quoteHostIdx = idx;
+          onQuoteData(data);
+        });
+      });
+  };
+  tryHost(quoteHostIdx);
+}
+
+function onQuoteData(data) {
+  const text = document.getElementById("refreshText");
+  if (text) {
+    text.textContent = "行情已同步 " + new Date().toLocaleTimeString("zh-CN", { hour12: false });
+    text.dataset.live = "1";
+  }
+  data.data.diff.forEach(applyQuoteItem);
+  paintLiveCells();
+}
+
+function fetchNavBatch() {
+  if (navRefreshing) return;
+  navRefreshing = true;
+  const codes = EMBEDDED_DATA.map(e => e.code);
+  let done = 0;
+  let changed = false;
+  const finishOne = () => {
+    done += 1;
+    if (done >= codes.length) {
+      navRefreshing = false;
+      if (changed) {
+        // 净值更新后重算溢价
+        etfData.forEach(e => {
+          if (!e.officialPrem && e.nav && e.latestPrice) {
+            e.premium = Math.round((e.latestPrice - e.nav) / e.nav * 10000) / 100;
+          }
+          if (e.size && e.nav && e.latestPrice) {
+            e.marketValue = Math.round(e.size * e.latestPrice / e.nav * 100) / 100;
+          }
+        });
+        paintLiveCells();
+        renderInsights();
+        renderCharts();
+      }
+    }
+  };
+  codes.forEach((code, i) => {
+    setTimeout(() => {
+      const proxyUrl = "/api/nav?fundCode=" + code + "&pageIndex=1&pageSize=3";
+      const directUrl = "https://api.fund.eastmoney.com/f10/lsjz?fundCode=" + code + "&pageIndex=1&pageSize=3";
+      fetch(proxyUrl, { method: "GET", mode: "cors", cache: "no-store", headers: { "Accept": "application/json" } })
+        .then(r => { if (!r.ok) throw new Error("http"); return r.json(); })
+        .catch(() => fetch(directUrl, { method: "GET", mode: "cors", cache: "no-store", headers: { "Accept": "application/json" } }))
+        .then(r => {
+          if (!r.ok) throw new Error("http");
+          return r.json();
+        })
+        .then(j => {
+          const ls = (j && j.Data && j.Data.LSJZList) || [];
+          if (!ls.length) return;
+          const latest = ls[0];
+          const e = etfData.find(d => d.code === code);
+          if (!e) return;
+          const nav = parseFloat(latest.DWJZ);
+          if (!isNaN(nav)) {
+            if (e.nav !== nav || e.navDate !== latest.FSRQ) changed = true;
+            e.nav = nav;
+            e.navDate = latest.FSRQ;
+            if (latest.JZZZL !== undefined && latest.JZZZL !== null && latest.JZZZL !== "") {
+              const nc = parseFloat(latest.JZZZL);
+              if (!isNaN(nc)) e.navChange = nc;
+            }
+          }
+        })
+        .catch(() => {})
+        .finally(finishOne);
+    }, i * 120);
+  });
+}
+
+function bind() {
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      const s = tab.dataset.sort;
+      if (currentSort === s) {
+        currentOrder = currentOrder === "asc" ? "desc" : "asc";
+      } else {
+        currentSort = s;
+        currentOrder = tab.dataset.order || "desc";
+      }
+      renderTable();
+    });
+  });
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.addEventListener("click", () => {
+      const s = th.dataset.sort;
+      if (currentSort === s) {
+        currentOrder = currentOrder === "asc" ? "desc" : "asc";
+      } else {
+        currentSort = s;
+        currentOrder = (s === "totalFee" || s === "establishDate" || s === "name" || s === "code" || s === "company" || s === "exchange")
+          ? "asc" : "desc";
+      }
+      renderTable();
+    });
+  });
+  document.getElementById("searchInput").addEventListener("input", () => renderTable());
+  document.getElementById("tbody").addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".detail-btn");
+    if (btn) showDetail(btn.dataset.code);
+  });
+  document.getElementById("modalClose").addEventListener("click", closeModal);
+  document.getElementById("modalOverlay").addEventListener("click", (ev) => {
+    if (ev.target.id === "modalOverlay") closeModal();
+  });
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") closeModal();
+  });
+  document.querySelectorAll(".series-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentSeries = btn.dataset.series || "ndx";
+      document.querySelectorAll(".series-btn").forEach(b => {
+        b.setAttribute("aria-pressed", b.dataset.series === currentSeries ? "true" : "false");
+      });
+      renderAll();
+    });
+  });
+}
+
+function boot() {
+  cloneData();
+  bind();
+  updateMarketStatus();
+  renderAll();
+  setInterval(updateMarketStatus, 30000);
+  setTimeout(fetchRealtime, 800);
+  refreshTimer = setInterval(fetchRealtime, 5000);
+  // 净值采用页面快照口径（与参考站一致，不随行情更新）；fetchNavBatch 保留但不再自动调用
+}
+
+boot();
+</script>
+</body>
+</html>
+
